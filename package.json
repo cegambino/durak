@@ -1,0 +1,17 @@
+{
+  "name": "durak-online",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Webbasiertes Durak (2 Spieler) mit KI und Einladungscode",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "express": "^4.21.0",
+    "socket.io": "^4.8.1"
+  }
+}
