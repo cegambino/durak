@@ -324,7 +324,8 @@
       }
     }
 
-    #screen-game.game-fixed {
+    /* :not(.hidden) damit Tailwind-.hidden wirkt (sonst überschreibt #id.game-fixed display:flex) */
+    #screen-game.game-fixed:not(.hidden) {
       position: fixed;
       inset: 0;
       z-index: 30;
@@ -338,12 +339,12 @@
       padding-right: env(safe-area-inset-right);
     }
 
-    #screen-game.game-fixed > .game-scroll {
+    #screen-game.game-fixed:not(.hidden) > .game-scroll {
       padding-top: max(0.25rem, env(safe-area-inset-top));
     }
 
     @media (min-width: 768px) {
-      #screen-game.game-fixed {
+      #screen-game.game-fixed:not(.hidden) {
         position: static;
         inset: auto;
         z-index: auto;
@@ -521,7 +522,7 @@
     </section>
 
     <!-- Spielfeld (mobil: volle Höhe, kein Seiten-Scroll; Hand nur horizontal) -->
-    <section id="screen-game" class="game-fixed hidden flex min-h-0 w-full max-w-none flex-col will-change-transform md:max-w-7xl">
+    <section id="screen-game" class="game-fixed hidden min-h-0 w-full max-w-none will-change-transform md:max-w-7xl">
       <div class="game-scroll flex min-h-0 flex-1 flex-col px-0 md:px-0">
         <div class="mb-2 flex shrink-0 flex-wrap items-center justify-between gap-2 px-1 md:mb-6 md:gap-4 md:px-0">
           <button type="button" id="btn-game-exit" class="touch-manipulation rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-emerald-100/90 transition hover:bg-white/10">← Menü</button>
