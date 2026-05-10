@@ -165,6 +165,19 @@
       border-color: rgba(251, 191, 36, 0.5) !important;
     }
 
+    @media (max-width: 767px) {
+      #screen-game .layout-compact #hand .card-trump-hand {
+        border-width: 2px !important;
+        border-color: rgba(250, 204, 21, 0.95) !important;
+        filter: drop-shadow(0 0 10px rgba(250, 204, 21, 0.85)) brightness(1.05);
+        z-index: 3;
+      }
+
+      #screen-game .layout-compact #hand .card-trump-hand.card-pick {
+        filter: drop-shadow(0 0 14px rgba(252, 211, 77, 0.95)) brightness(1.08);
+      }
+    }
+
     .anim-hand-card {
       animation: card-deal 0.5s var(--ease-out-expo) both;
       animation-delay: calc(var(--i, 0) * 42ms);
@@ -372,58 +385,86 @@
     }
 
     @media (max-width: 767px) {
+      #screen-game .hand-strip {
+        overflow-x: visible;
+        overflow-y: visible;
+        touch-action: manipulation;
+      }
+
+      #screen-game .layout-compact #hand {
+        flex-wrap: wrap;
+        justify-content: center;
+        align-content: flex-end;
+        align-items: flex-end;
+        row-gap: 0.2rem;
+        column-gap: 0.15rem;
+        max-width: 100%;
+      }
+
       #screen-game .layout-compact .card-face:not(:disabled) {
         transform: none;
       }
 
-      #screen-game .layout-compact .card.card-face {
-        height: 5.75rem;
-        width: 3.85rem;
-        padding: 0.35rem 0.4rem;
-        font-size: 0.8rem;
-        border-radius: 0.65rem;
+      /* Nur Handkarten: kleiner + umbrechen = kein horizontales Scrollen */
+      #screen-game .layout-compact #hand .card.card-face {
+        height: 4.35rem;
+        width: 2.72rem;
+        padding: 0.25rem 0.3rem;
+        font-size: 0.7rem;
+        border-radius: 0.5rem;
       }
 
-      #screen-game .layout-compact .card.card-face span.text-3xl {
-        font-size: 1.35rem;
+      #screen-game .layout-compact #hand .card.card-face span.text-3xl {
+        font-size: 1.05rem;
         line-height: 1;
       }
 
-      #screen-game .layout-compact .card.card-face span.text-4xl,
-      #screen-game .layout-compact .card.card-face span.sm\:text-4xl {
-        font-size: 1.35rem;
+      #screen-game .layout-compact #hand .card.card-face span.text-4xl,
+      #screen-game .layout-compact #hand .card.card-face span.sm\:text-4xl {
+        font-size: 1.1rem;
       }
 
       #screen-game .layout-compact .anim-table-pair .card-face {
-        height: 4.75rem;
-        width: 3.25rem;
-        font-size: 0.65rem;
+        height: 5.1rem;
+        width: 3.45rem;
+        font-size: 0.7rem;
       }
 
       #screen-game .layout-compact .anim-table-pair .card-face span.text-xl {
-        font-size: 1rem;
+        font-size: 1.1rem;
       }
 
       #screen-game .layout-compact .anim-table-pair .card-face span.sm\:text-2xl {
-        font-size: 1.05rem;
+        font-size: 1.2rem;
       }
 
       #screen-game .layout-compact .anim-table-pair .flex.h-\[5\.5rem\] {
-        height: 4.75rem;
-        width: 3.25rem;
+        height: 5.1rem;
+        width: 3.45rem;
       }
 
       #screen-game .layout-compact #opponent-backs .card-back {
-        height: 3.25rem;
-        width: 2.35rem;
+        height: 2.85rem;
+        width: 2.05rem;
       }
 
       #screen-game .layout-compact .turn-slot-wrap {
-        transform: scale(0.88);
+        transform: scale(0.72);
       }
 
-      #screen-game .layout-compact .table-felt {
-        min-height: 0;
+      /* Tisch: mehr Fläche, Inhalt zentriert (nicht unten „kleben“) */
+      #screen-game .layout-compact #table-area.table-felt {
+        min-height: min(46vh, 22rem);
+        flex: 1 1 52%;
+      }
+
+      #screen-game .layout-compact #table-rows {
+        align-content: center;
+        justify-content: center;
+      }
+
+      #screen-game .layout-compact #hand .card-pick {
+        transform: translateY(-5px) scale(1.03) !important;
       }
     }
 
@@ -529,12 +570,12 @@
           <div id="game-mode-label" class="rounded-full border border-white/10 bg-black/30 px-3 py-1.5 text-[10px] font-medium uppercase tracking-wider text-emerald-200/90 md:px-5 md:py-2 md:text-xs"></div>
         </div>
 
-        <div class="layout-compact screen-enter flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl glass-panel p-3 shadow-glow md:rounded-3xl md:p-8 lg:p-10">
-          <div class="mb-2 flex min-h-0 shrink-0 flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3 md:mb-6 md:gap-6">
+        <div class="layout-compact screen-enter flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl glass-panel p-2 shadow-glow md:rounded-3xl md:p-8 lg:p-10">
+          <div class="mb-1 flex min-h-0 shrink-0 flex-col gap-1.5 sm:mb-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3 md:mb-6 md:gap-6">
             <div class="min-w-0 flex-1 md:pr-2">
               <p id="opponent-label" class="font-display text-xs font-semibold uppercase tracking-wider text-gold/90 md:text-sm">Gegner</p>
-              <div class="mt-2 flex flex-wrap items-center gap-2 md:mt-3 md:gap-4">
-                <div id="opponent-backs" class="relative flex h-[3.5rem] items-center pl-0.5 sm:h-[5.25rem]"></div>
+              <div class="mt-1 flex flex-wrap items-center gap-1.5 sm:mt-2 md:mt-3 md:gap-4">
+                <div id="opponent-backs" class="relative flex h-12 items-center pl-0.5 sm:h-[5.25rem]"></div>
                 <p id="opponent-cards" class="text-xs text-white/55 md:text-base md:text-sm">Karten: —</p>
               </div>
             </div>
@@ -548,19 +589,19 @@
             </div>
           </div>
 
-          <div id="table-area" class="table-felt relative mt-1 flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl p-3 md:mt-0 md:min-h-[300px] md:rounded-2xl md:p-8">
+          <div id="table-area" class="table-felt relative mt-0.5 flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl p-2 md:mt-0 md:min-h-[300px] md:rounded-2xl md:p-8">
             <div class="pointer-events-none absolute right-2 top-2 opacity-25 md:right-6 md:top-6 md:opacity-30">
               <div class="deck-pile h-12 w-9 rounded-md border border-white/10 bg-gradient-to-b from-emerald-900/80 to-black/60 shadow-card sm:h-20 sm:w-14"></div>
             </div>
-            <p class="mb-1 shrink-0 text-center text-[9px] font-bold uppercase tracking-[0.3em] text-white/35 md:mb-4 md:text-[10px] md:tracking-[0.35em]">Tisch</p>
-            <div id="table-rows" class="relative z-[1] flex min-h-0 flex-1 flex-wrap content-end items-end justify-center gap-2 pb-1 sm:gap-6 md:gap-8"></div>
+            <p class="mb-0.5 shrink-0 text-center text-[9px] font-bold uppercase tracking-[0.3em] text-white/35 md:mb-4 md:text-[10px] md:tracking-[0.35em]">Tisch</p>
+            <div id="table-rows" class="relative z-[1] flex min-h-0 flex-1 flex-wrap content-center items-center justify-center gap-2 py-1 sm:gap-6 md:gap-8"></div>
           </div>
 
-          <div id="turn-bar" class="mt-2 shrink-0 flex flex-col items-center md:mt-10">
+          <div id="turn-bar" class="mt-1 shrink-0 flex flex-col items-center md:mt-10">
             <p class="text-[9px] font-bold uppercase tracking-[0.28em] text-white/35 md:text-[10px] md:tracking-[0.3em]">Am Zug · max. 15s</p>
-            <div class="mt-2 flex flex-wrap items-start justify-center gap-6 md:mt-5 md:gap-28">
-            <div id="turn-wrap-opp" class="turn-slot-wrap flex flex-col items-center gap-1 transition-all duration-300 md:gap-2">
-              <div class="relative h-[5.75rem] w-[5.75rem] md:h-[6.75rem] md:w-[6.75rem]">
+            <div class="mt-1 flex flex-wrap items-start justify-center gap-4 md:mt-5 md:gap-28">
+            <div id="turn-wrap-opp" class="turn-slot-wrap flex flex-col items-center gap-0.5 transition-all duration-300 md:gap-2">
+              <div class="relative h-[4.25rem] w-[4.25rem] md:h-[6.75rem] md:w-[6.75rem]">
                 <svg class="pointer-events-none absolute inset-0 h-full w-full" viewBox="0 0 100 100" aria-hidden="true">
                   <circle class="turn-ring-bg" cx="50" cy="50" r="43" />
                   <circle
@@ -581,8 +622,8 @@
               <span id="turn-label-opp" class="text-xs font-semibold uppercase tracking-wider text-white/45">Gegner</span>
               <span id="turn-sec-opp" class="tabular-nums text-sm font-bold text-emerald-200/85"></span>
             </div>
-            <div id="turn-wrap-me" class="turn-slot-wrap flex flex-col items-center gap-1 transition-all duration-300 md:gap-2">
-              <div class="relative h-[5.75rem] w-[5.75rem] md:h-[6.75rem] md:w-[6.75rem]">
+            <div id="turn-wrap-me" class="turn-slot-wrap flex flex-col items-center gap-0.5 transition-all duration-300 md:gap-2">
+              <div class="relative h-[4.25rem] w-[4.25rem] md:h-[6.75rem] md:w-[6.75rem]">
                 <svg class="pointer-events-none absolute inset-0 h-full w-full" viewBox="0 0 100 100" aria-hidden="true">
                   <circle class="turn-ring-bg" cx="50" cy="50" r="43" />
                   <circle
@@ -606,15 +647,15 @@
           </div>
           </div>
 
-        <p id="phase-hint" class="mt-2 min-h-[2.5rem] px-1 text-center text-xs font-medium leading-snug text-emerald-100/95 md:min-h-[1.5rem] md:text-base md:text-lg md:mt-8"></p>
+        <p id="phase-hint" class="mt-1 min-h-0 px-1 py-0.5 text-center text-xs font-medium leading-snug text-emerald-100/95 md:mt-8 md:min-h-[1.5rem] md:py-0 md:text-base md:text-lg"></p>
         <p id="winner-banner" class="hidden shrink-0 py-2 text-center font-display text-lg font-bold text-gold-bright md:py-4 md:text-3xl md:text-2xl"></p>
 
-        <div id="action-bar" class="mt-2 flex shrink-0 flex-wrap justify-center gap-2 px-1 md:mt-6 md:gap-4"></div>
+        <div id="action-bar" class="mt-1 flex shrink-0 flex-wrap justify-center gap-2 px-1 md:mt-6 md:gap-4"></div>
 
-        <div class="mt-2 shrink-0 border-t border-white/10 pt-3 md:mt-10 md:pt-8">
-          <p id="hand-hint" class="mb-2 hidden text-center text-[10px] font-medium uppercase tracking-wider text-white/45 sm:block md:mb-4 md:text-xs">Trumpf leuchtet · Angriff/Nachlegen/Verteidigen per Kartenauswahl (automatisch)</p>
-          <div class="hand-strip max-w-full overflow-x-auto overflow-y-hidden pb-1 [-ms-overflow-style:none] [scrollbar-width:none] md:overflow-visible [&::-webkit-scrollbar]:hidden">
-            <div id="hand" class="flex min-h-0 flex-nowrap items-end justify-start gap-1.5 px-1 pb-1 md:min-h-[11rem] md:flex-wrap md:justify-center md:gap-4"></div>
+        <div class="mt-1 shrink-0 border-t border-white/10 pt-2 md:mt-10 md:pt-8">
+          <p id="hand-hint" class="mb-1 hidden text-center text-[10px] font-medium uppercase tracking-wider text-white/45 sm:block md:mb-4 md:text-xs">Trumpf leuchtet · Angriff/Nachlegen/Verteidigen per Kartenauswahl (automatisch)</p>
+          <div class="hand-strip max-w-full overflow-x-auto overflow-y-hidden pb-1 [-ms-overflow-style:none] [scrollbar-width:none] max-md:overflow-x-visible max-md:overflow-y-visible md:overflow-visible [&::-webkit-scrollbar]:hidden">
+            <div id="hand" class="flex min-h-0 flex-wrap items-end justify-center gap-1 px-0.5 pb-1 max-md:max-w-full md:min-h-[11rem] md:gap-4"></div>
           </div>
         </div>
       </div>
