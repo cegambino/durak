@@ -6,7 +6,10 @@
     return;
   }
 
+  document.body.classList.add('splash-active');
+
   const $ = (id) => document.getElementById(id);
+  const appRoot = document.getElementById('app');
   const screens = { menu: $('screen-menu'), lobby: $('screen-lobby'), game: $('screen-game') };
 
   let mode = 'menu';
@@ -19,9 +22,19 @@
   let aiTurnKey = '';
   let aiTurnEndsAt = 0;
   let turnAnimRaf = null;
+  /** Debounce für automatischen Angriff / Nachlegen (mehrere Karten gleichen Rangs) */
+  let autoCommitTimer = null;
+  const AUTO_ATTACK_MS = 420;
 
   const TURN_MS = 15000;
+  /** KI „denkt“ zufällig lange vor jedem Zug (ms) */
+  const AI_THINK_MIN_MS = 2000;
+  const AI_THINK_MAX_MS = 4000;
   const RING_C = 270.177;
+
+  function randomAiThinkMs() {
+    return AI_THINK_MIN_MS + Math.floor(Math.random() * (AI_THINK_MAX_MS - AI_THINK_MIN_MS + 1));
+  }
   /** Farbe Pik → Herz (Reihenfolge links in der Hand) */
   const SUIT_ORDER = { '♠': 0, '♣': 1, '♥': 2, '♦': 3 };
   const SUIT_LABEL = {
@@ -32,6 +45,7 @@
   };
 
   function showScreen(name) {
+    if (appRoot) appRoot.classList.toggle('app--game', name === 'game');
     screens.menu.classList.toggle('hidden', name !== 'menu');
     screens.lobby.classList.toggle('hidden', name !== 'lobby');
     screens.game.classList.toggle('hidden', name !== 'game');
@@ -44,20 +58,74 @@
   }
 
   const BTN_PRIMARY =
-    'btn-primary rounded-2xl px-8 py-3.5 font-display text-base font-bold text-felt md:px-10 md:py-4 md:text-lg';
+    'btn-primary touch-manipulation rounded-2xl px-5 py-3 font-display text-sm font-bold text-felt sm:px-8 sm:py-3.5 sm:text-base md:px-10 md:py-4 md:text-lg';
   const BTN_GHOST =
-    'btn-ghost rounded-2xl border border-white/20 bg-white/[0.06] px-6 py-3.5 font-display text-base font-semibold text-white hover:bg-white/10 md:px-8 md:py-4';
+    'btn-ghost touch-manipulation rounded-2xl border border-white/20 bg-white/[0.06] px-5 py-3 font-display text-sm font-semibold text-white hover:bg-white/10 sm:px-6 sm:py-3.5 sm:text-base md:px-8 md:py-4';
   const BTN_DANGER =
-    'btn-ghost rounded-2xl bg-rose-600/90 px-6 py-3.5 font-display text-base font-semibold text-white shadow-lg shadow-rose-900/30 hover:bg-rose-500 md:px-8 md:py-4';
-  const BTN_SUCCESS =
-    'btn-ghost rounded-2xl bg-emerald-600/95 px-6 py-3.5 font-display text-base font-semibold text-white shadow-lg shadow-emerald-900/25 hover:bg-emerald-500 md:px-8 md:py-4';
-  const BTN_DISABLED =
-    'pointer-events-none cursor-not-allowed rounded-2xl bg-white/[0.06] px-6 py-3.5 font-display text-base text-white/35 md:px-8 md:py-4';
-
+    'btn-ghost touch-manipulation rounded-2xl bg-rose-600/90 px-5 py-3 font-display text-sm font-semibold text-white shadow-lg shadow-rose-900/30 hover:bg-rose-500 sm:px-6 sm:py-3.5 sm:text-base md:px-8 md:py-4';
   function turnTimerKeyFromSnap(snap) {
     if (!snap || snap.winnerIndex !== null) return '';
     const undef = snap.table ? snap.table.filter((r) => !r[1]).length : 0;
     return [snap.phase, snap.attackerIndex, snap.defenderIndex, snap.table.length, undef, snap.deckCount].join('|');
+  }
+
+  function clearAutoCommitTimer() {
+    if (autoCommitTimer) {
+      clearTimeout(autoCommitTimer);
+      autoCommitTimer = null;
+    }
+  }
+
+  function scheduleAutoCommitAttackToss() {
+    clearAutoCommitTimer();
+    const snapRef =
+      mode === 'ai' && localState
+        ? `ai|${localState.phase}|${localState.attackerIndex}|${localState.table.length}|${localState.defenderIndex}`
+        : mode === 'online' && window.__lastOnlineSnap
+          ? (() => {
+              const s = window.__lastOnlineSnap;
+              return `on|${s.phase}|${s.attackerIndex}|${s.table.length}|${s.defenderIndex}|${s.myIndex}`;
+            })()
+          : '';
+    autoCommitTimer = setTimeout(() => {
+      autoCommitTimer = null;
+      if (mode === 'ai' && localState) {
+        const cur = localState;
+        const curKey = `ai|${cur.phase}|${cur.attackerIndex}|${cur.table.length}|${cur.defenderIndex}`;
+        if (curKey !== snapRef) return;
+        if (cur.phase !== 'attack' && cur.phase !== 'toss') return;
+        if (cur.attackerIndex !== 0) return;
+        const ids = [...selected];
+        if (ids.length === 0) return;
+        doAttack(ids);
+      } else if (mode === 'online' && socket && window.__lastOnlineSnap) {
+        const cur = window.__lastOnlineSnap;
+        const curKey = `on|${cur.phase}|${cur.attackerIndex}|${cur.table.length}|${cur.defenderIndex}|${cur.myIndex}`;
+        if (curKey !== snapRef) return;
+        if (cur.phase !== 'attack' && cur.phase !== 'toss') return;
+        if (cur.attackerIndex !== cur.myIndex) return;
+        const ids = [...selected];
+        if (ids.length === 0) return;
+        doAttack(ids);
+      }
+    }, AUTO_ATTACK_MS);
+  }
+
+  function tryAutoDefendAi() {
+    if (mode !== 'ai' || !localState) return;
+    if (localState.phase !== 'defend' || localState.defenderIndex !== 0) return;
+    const need = localState.table.filter((r) => !r[1]).length;
+    if (need === 0 || need !== defendOrder.length) return;
+    doDefend([...defendOrder]);
+  }
+
+  function tryAutoDefendOnline() {
+    if (!socket || !window.__lastOnlineSnap) return;
+    const cur = window.__lastOnlineSnap;
+    if (cur.phase !== 'defend' || cur.defenderIndex !== cur.myIndex) return;
+    const need = cur.table.filter((r) => !r[1]).length;
+    if (need === 0 || need !== defendOrder.length) return;
+    doDefend([...defendOrder]);
   }
 
   function sortHandDisplay(hand, trumpSuit) {
@@ -347,8 +415,8 @@
   function maybeScheduleAi() {
     if (mode !== 'ai' || !localState || localState.winnerIndex !== null) return;
     const st = localState;
-    if (st.phase === 'defend' && st.defenderIndex === 1) scheduleAi(500);
-    else if ((st.phase === 'attack' || st.phase === 'toss') && st.attackerIndex === 1) scheduleAi(500);
+    if (st.phase === 'defend' && st.defenderIndex === 1) scheduleAi(randomAiThinkMs());
+    else if ((st.phase === 'attack' || st.phase === 'toss') && st.attackerIndex === 1) scheduleAi(randomAiThinkMs());
   }
 
   function runAiTurn() {
@@ -388,7 +456,8 @@
     root.innerHTML = '';
     if (!snap || !snap.table.length) {
       const empty = document.createElement('p');
-      empty.className = 'w-full py-12 text-center text-sm font-medium text-white/35 md:py-16 md:text-base';
+      empty.className =
+        'w-full py-6 text-center text-xs font-medium text-white/35 sm:py-10 sm:text-sm md:py-16 md:text-base';
       empty.textContent = 'Warte auf den ersten Angriff …';
       root.appendChild(empty);
       return;
@@ -454,12 +523,14 @@
         else selected.add(cardId);
         pruneAttackSelection();
         renderGame();
+        scheduleAutoCommitAttackToss();
         return;
       }
       if (phase === 'toss' && myAtt) {
         if (selected.has(cardId)) selected.delete(cardId);
         else selected.add(cardId);
         renderGame();
+        scheduleAutoCommitAttackToss();
         return;
       }
       if (phase === 'defend' && myDef) {
@@ -468,6 +539,7 @@
         else defendOrder.push(cardId);
         syncDefendSelectionFromOrder();
         renderGame();
+        tryAutoDefendAi();
         return;
       }
     }
@@ -503,23 +575,10 @@
       bar.appendChild(b);
     }
 
-    if (snap.phase === 'attack' && myAtt) {
-      btn('Angreifen', BTN_PRIMARY, () => doAttack([...selected]));
-    }
     if (snap.phase === 'toss' && myAtt) {
-      btn('Nachlegen', BTN_PRIMARY, () => doAttack([...selected]));
       btn('Passen · Stich gewonnen', BTN_GHOST, () => doPass());
     }
     if (snap.phase === 'defend' && myDef) {
-      const need = snap.table.filter((r) => !r[1]).length;
-      btn(
-        'Verteidigen',
-        need === defendOrder.length ? BTN_SUCCESS : BTN_DISABLED,
-        () => {
-          if (need !== defendOrder.length) return;
-          doDefend([...defendOrder]);
-        }
-      );
       btn('Aufnehmen', BTN_DANGER, () => doTake());
     }
   }
@@ -539,11 +598,20 @@
     const me = snap.myIndex;
     let t = '';
     if (snap.phase === 'attack') {
-      t = snap.attackerIndex === me ? 'Du greifst an — gleicher Rang für mehrere Karten.' : 'Gegner greift an.';
+      t =
+        snap.attackerIndex === me
+          ? 'Karten wählen (gleicher Rang) — Angriff startet automatisch kurz nach der Auswahl.'
+          : 'Gegner greift an.';
     } else if (snap.phase === 'defend') {
-      t = snap.defenderIndex === me ? 'Verteidige: Klickreihenfolge = Reihenfolge der Angriffe.' : 'Gegner verteidigt …';
+      t =
+        snap.defenderIndex === me
+          ? 'Karten in Angriffs-Reihenfolge antippen — bei gültiger Verteidigung automatisch ausgeführt.'
+          : 'Gegner verteidigt …';
     } else if (snap.phase === 'toss') {
-      t = snap.attackerIndex === me ? 'Nachlegen nur mit Rängen vom Tisch — oder passen.' : 'Gegner legt nach oder passt …';
+      t =
+        snap.attackerIndex === me
+          ? 'Passende Ränge antippen (Nachlegen automatisch) oder Passen zum Stichgewinn.'
+          : 'Gegner legt nach oder passt …';
     }
     el.textContent = t;
     el.classList.remove('phase-hint-anim');
@@ -602,7 +670,7 @@
       selected.clear();
       defendOrder = [];
       renderGame();
-      scheduleAi(400);
+      scheduleAi(randomAiThinkMs());
       return;
     }
     if (mode === 'online' && socket) {
@@ -623,7 +691,7 @@
       defendOrder = [];
       selected.clear();
       renderGame();
-      scheduleAi(400);
+      scheduleAi(randomAiThinkMs());
       return;
     }
     if (mode === 'online' && socket) {
@@ -640,7 +708,7 @@
       E.attackerPass(localState, 0);
       selected.clear();
       renderGame();
-      scheduleAi(400);
+      scheduleAi(randomAiThinkMs());
       return;
     }
     if (mode === 'online' && socket) {
@@ -656,7 +724,7 @@
       defendOrder = [];
       selected.clear();
       renderGame();
-      scheduleAi(400);
+      scheduleAi(randomAiThinkMs());
       return;
     }
     if (mode === 'online' && socket) {
@@ -668,6 +736,7 @@
   }
 
   function startAi() {
+    clearAutoCommitTimer();
     clearAiTimer();
     stopTurnVisualizer();
     aiTurnKey = '';
@@ -678,10 +747,11 @@
     defendOrder = [];
     showScreen('game');
     renderGame();
-    if (localState.attackerIndex === 1) scheduleAi(400);
+    if (localState.attackerIndex === 1) scheduleAi(randomAiThinkMs());
   }
 
   function exitGame() {
+    clearAutoCommitTimer();
     clearAiTimer();
     stopTurnVisualizer();
     aiTurnKey = '';
@@ -786,6 +856,7 @@
     if (!socket || socket.__wired) return;
     socket.__wired = true;
     socket.on('state', (payload) => {
+      clearAutoCommitTimer();
       if (payload.mySlot != null) mySlotOnline = payload.mySlot;
       updateRoomUi(payload);
       if (payload.started && payload.snapshot) {
@@ -865,16 +936,19 @@
             for (const x of cards) if (x.rank !== r0) selected.delete(x.id);
           }
           renderGameOnline(cur);
+          scheduleAutoCommitAttackToss();
         } else if (ph === 'toss' && iAtt) {
           if (selected.has(c.id)) selected.delete(c.id);
           else selected.add(c.id);
           renderGameOnline(cur);
+          scheduleAutoCommitAttackToss();
         } else if (ph === 'defend' && iDef) {
           const idx = defendOrder.indexOf(c.id);
           if (idx >= 0) defendOrder.splice(idx, 1);
           else defendOrder.push(c.id);
           selected = new Set(defendOrder);
           renderGameOnline(cur);
+          tryAutoDefendOnline();
         }
       });
       root.appendChild(el);
@@ -897,21 +971,7 @@
       bar.appendChild(b);
     }
 
-    if (snap.phase === 'attack' && myAtt) {
-      btn('Angreifen', BTN_PRIMARY, () => {
-        socket.emit('attack', [...selected], (r) => {
-          if (!r.ok) $('phase-hint').textContent = r.err || 'Fehler';
-          selected.clear();
-        });
-      });
-    }
     if (snap.phase === 'toss' && myAtt) {
-      btn('Nachlegen', BTN_PRIMARY, () => {
-        socket.emit('attack', [...selected], (r) => {
-          if (!r.ok) $('phase-hint').textContent = r.err || 'Fehler';
-          selected.clear();
-        });
-      });
       btn('Passen', BTN_GHOST, () => {
         socket.emit('pass', () => {
           selected.clear();
@@ -919,19 +979,6 @@
       });
     }
     if (snap.phase === 'defend' && myDef) {
-      const need = snap.table.filter((r) => !r[1]).length;
-      btn(
-        'Verteidigen',
-        need === defendOrder.length ? BTN_SUCCESS : BTN_DISABLED,
-        () => {
-          if (need !== defendOrder.length) return;
-          socket.emit('defend', [...defendOrder], (r) => {
-            if (!r.ok) $('phase-hint').textContent = r.err || 'Fehler';
-            defendOrder = [];
-            selected.clear();
-          });
-        }
-      );
       btn('Aufnehmen', BTN_DANGER, () => {
         socket.emit('take', () => {
           defendOrder = [];
@@ -940,4 +987,17 @@
       });
     }
   }
+
+  const splashEl = document.getElementById('screen-splash');
+  const splashBtn = document.getElementById('btn-splash-continue');
+  function dismissSplash() {
+    if (!splashEl || splashEl.classList.contains('is-out')) return;
+    splashEl.classList.add('is-out');
+    document.body.classList.remove('splash-active');
+    window.setTimeout(() => {
+      splashEl.classList.add('hidden');
+      splashEl.setAttribute('aria-hidden', 'true');
+    }, 460);
+  }
+  if (splashBtn) splashBtn.addEventListener('click', dismissSplash);
 })();
