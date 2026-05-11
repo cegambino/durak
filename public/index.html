@@ -30,7 +30,10 @@
   </script>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet" />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Cormorant+Garamond:ital,wght@0,500;0,600;1,400&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=Outfit:wght@500;600;700;800&display=swap"
+    rel="stylesheet"
+  />
   <style>
     :root {
       --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
@@ -278,61 +281,377 @@
       box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.06), inset 0 0 24px rgba(52, 211, 153, 0.08);
     }
 
-    @keyframes splash-title {
-      from {
+    /* ——— Cinema intro ——— */
+    @keyframes cinema-grain-shift {
+      0%, 100% { transform: translate(0, 0); }
+      25% { transform: translate(-2%, 1%); }
+      50% { transform: translate(1%, -1%); }
+      75% { transform: translate(-1%, -2%); }
+    }
+
+    @keyframes cinema-pulse-glow {
+      0%, 100% { opacity: 0.35; transform: scale(1) translate(-50%, -42%); }
+      50% { opacity: 0.65; transform: scale(1.12) translate(-50%, -42%); }
+    }
+
+    @keyframes cinema-sweep {
+      0% { transform: translateX(-120%) skewX(-12deg); opacity: 0; }
+      15% { opacity: 0.55; }
+      50% { transform: translateX(0%) skewX(-12deg); opacity: 0.35; }
+      100% { transform: translateX(120%) skewX(-12deg); opacity: 0; }
+    }
+
+    @keyframes cinema-char-in {
+      0% {
         opacity: 0;
-        letter-spacing: 0.35em;
-        transform: translateY(12px) scale(0.96);
+        transform: translateY(110%) rotateX(-88deg) scale(0.85);
+        filter: blur(12px);
       }
-      to {
+      55% {
+        filter: blur(0);
+      }
+      100% {
         opacity: 1;
-        letter-spacing: 0.12em;
-        transform: translateY(0) scale(1);
+        transform: translateY(0) rotateX(0deg) scale(1);
+        filter: blur(0);
       }
     }
 
-    @keyframes splash-byline {
+    @keyframes cinema-tagline-in {
       from {
         opacity: 0;
-        transform: translateY(8px);
+        letter-spacing: 0.55em;
+        transform: translateY(10px);
       }
       to {
         opacity: 1;
+        letter-spacing: 0.38em;
         transform: translateY(0);
       }
     }
 
-    @keyframes splash-glow {
-      0%, 100% { opacity: 0.45; transform: scale(1); }
-      50% { opacity: 0.75; transform: scale(1.08); }
+    @keyframes cinema-byline-in {
+      from {
+        opacity: 0;
+        transform: translateY(20px) scale(0.92);
+        filter: blur(6px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+        filter: blur(0);
+      }
     }
 
-    #screen-splash {
-      padding: max(1.25rem, env(safe-area-inset-top)) max(1.25rem, env(safe-area-inset-right))
-        max(1.5rem, env(safe-area-inset-bottom)) max(1.25rem, env(safe-area-inset-left));
+    @keyframes cinema-cta-in {
+      from {
+        opacity: 0;
+        transform: translateY(28px) scale(0.88);
+        box-shadow: 0 0 0 0 rgba(232, 192, 102, 0);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+        box-shadow: 0 0 48px -8px rgba(232, 192, 102, 0.5), 0 12px 40px rgba(0, 0, 0, 0.5);
+      }
     }
 
-    #screen-splash .splash-title {
-      animation: splash-title 0.9s var(--ease-out-expo) both;
+    @keyframes cinema-flare-drift {
+      0%, 100% { opacity: 0.25; transform: translate(-20%, -10%) rotate(-8deg); }
+      50% { opacity: 0.45; transform: translate(10%, 5%) rotate(-4deg); }
     }
 
-    #screen-splash .splash-byline {
-      animation: splash-byline 0.65s var(--ease-out-expo) 0.35s both;
+    @keyframes cinema-suits-drift {
+      0%, 100% { transform: translateY(0) rotate(var(--rot, 0deg)); opacity: 0.12; }
+      50% { transform: translateY(-14px) rotate(calc(var(--rot, 0deg) + 4deg)); opacity: 0.22; }
     }
 
-    #screen-splash .splash-orb {
-      animation: splash-glow 3.5s ease-in-out infinite;
+    #screen-splash.cinema-splash {
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      touch-action: manipulation;
+      padding: max(1.25rem, env(safe-area-inset-top)) max(1rem, env(safe-area-inset-right))
+        max(1.25rem, env(safe-area-inset-bottom)) max(1rem, env(safe-area-inset-left));
+      background: radial-gradient(ellipse 120% 80% at 50% 120%, #0d2818 0%, #020806 45%, #000 100%);
+      overflow: hidden;
+      perspective: 1400px;
+    }
+
+    #screen-splash .cinema-letterbox {
+      position: absolute;
+      left: 0;
+      right: 0;
+      z-index: 50;
+      pointer-events: none;
+      background: linear-gradient(180deg, #000 0%, #000 96%, transparent 100%);
+      height: clamp(2.25rem, 6vh, 4.5rem);
+    }
+
+    #screen-splash .cinema-letterbox--top {
+      top: 0;
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.85);
+    }
+
+    #screen-splash .cinema-letterbox--bottom {
+      bottom: 0;
+      transform: rotate(180deg);
+      box-shadow: 0 -12px 40px rgba(0, 0, 0, 0.85);
+    }
+
+    #screen-splash .cinema-vignette {
+      position: absolute;
+      inset: 0;
+      z-index: 4;
+      pointer-events: none;
+      background: radial-gradient(ellipse 65% 55% at 50% 42%, transparent 0%, rgba(0, 0, 0, 0.55) 72%, #000 100%);
+    }
+
+    #screen-splash .cinema-grain {
+      position: absolute;
+      inset: -20%;
+      z-index: 5;
+      pointer-events: none;
+      opacity: 0.11;
+      mix-blend-mode: overlay;
+      animation: cinema-grain-shift 0.35s steps(4) infinite;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+      background-size: 200px 200px;
+    }
+
+    #screen-splash .cinema-orb {
+      position: absolute;
+      left: 50%;
+      top: 38%;
+      width: min(120vw, 720px);
+      height: min(120vw, 720px);
+      transform: translate(-50%, -42%);
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 1;
+      background:
+        radial-gradient(circle at 35% 35%, rgba(52, 211, 153, 0.22) 0%, transparent 42%),
+        radial-gradient(circle at 70% 60%, rgba(232, 192, 102, 0.18) 0%, transparent 38%),
+        radial-gradient(circle at 50% 100%, rgba(6, 26, 20, 0.9) 0%, transparent 55%);
+      filter: blur(2px);
+      animation: cinema-pulse-glow 5s ease-in-out infinite;
+    }
+
+    #screen-splash .cinema-sweep {
+      position: absolute;
+      top: 28%;
+      left: 0;
+      width: 55%;
+      height: 55%;
+      z-index: 2;
+      pointer-events: none;
+      background: linear-gradient(
+        105deg,
+        transparent 0%,
+        rgba(255, 250, 230, 0.03) 40%,
+        rgba(255, 255, 255, 0.14) 50%,
+        rgba(255, 250, 230, 0.03) 60%,
+        transparent 100%
+      );
+      mix-blend-mode: screen;
+      animation: cinema-sweep 4.5s ease-in-out infinite;
+    }
+
+    #screen-splash .cinema-flare {
+      position: absolute;
+      top: 22%;
+      left: 58%;
+      width: min(45vw, 280px);
+      height: min(45vw, 280px);
+      z-index: 3;
+      pointer-events: none;
+      background: radial-gradient(circle, rgba(255, 248, 220, 0.2) 0%, rgba(232, 192, 102, 0.08) 35%, transparent 70%);
+      filter: blur(20px);
+      animation: cinema-flare-drift 8s ease-in-out infinite;
+    }
+
+    #screen-splash .cinema-suits {
+      position: absolute;
+      inset: 0;
+      z-index: 2;
+      pointer-events: none;
+      font-family: 'Cormorant Garamond', Georgia, serif;
+      font-size: clamp(3.5rem, 18vw, 9rem);
+      line-height: 1;
+      color: rgba(232, 192, 102, 0.15);
+    }
+
+    #screen-splash .cinema-suits span {
+      position: absolute;
+      animation: cinema-suits-drift 7s ease-in-out infinite;
+    }
+
+    #screen-splash .cinema-suits .s1 {
+      --rot: -12deg;
+      top: 14%;
+      left: 6%;
+      animation-delay: 0s;
+    }
+    #screen-splash .cinema-suits .s2 {
+      --rot: 8deg;
+      top: 18%;
+      right: 8%;
+      animation-delay: -1.2s;
+      color: rgba(251, 113, 133, 0.18);
+    }
+    #screen-splash .cinema-suits .s3 {
+      --rot: 6deg;
+      bottom: 22%;
+      left: 10%;
+      animation-delay: -2s;
+    }
+    #screen-splash .cinema-suits .s4 {
+      --rot: -10deg;
+      bottom: 26%;
+      right: 12%;
+      animation-delay: -3s;
+    }
+
+    #screen-splash .cinema-content {
+      position: relative;
+      z-index: 10;
+      max-width: min(92vw, 36rem);
+      transform-style: preserve-3d;
+    }
+
+    #screen-splash .cinema-tagline {
+      font-family: 'Cormorant Garamond', Georgia, serif;
+      font-size: clamp(0.7rem, 2.8vw, 0.95rem);
+      font-style: italic;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.38em;
+      color: rgba(167, 243, 208, 0.75);
+      margin-bottom: 0.75rem;
+      animation: cinema-tagline-in 1.4s var(--ease-out-expo) 0.15s both;
+    }
+
+    #screen-splash .cinema-title {
+      font-family: 'Bebas Neue', Impact, sans-serif;
+      font-size: clamp(4.5rem, 22vw, 9.5rem);
+      line-height: 0.88;
+      font-weight: 400;
+      letter-spacing: 0.14em;
+      margin: 0;
+      padding: 0 0.1em;
+      background: linear-gradient(185deg, #fffef8 0%, #e8c066 38%, #8b6914 72%, #3d2e08 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      filter: drop-shadow(0 0 40px rgba(232, 192, 102, 0.35)) drop-shadow(0 8px 32px rgba(0, 0, 0, 0.9));
+      transform-style: preserve-3d;
+    }
+
+    #screen-splash .cinema-title .cinema-char {
+      display: inline-block;
+      transform-origin: 50% 100%;
+      animation: cinema-char-in 1.15s var(--ease-out-expo) both;
+      animation-delay: calc(0.45s + var(--ci, 0) * 0.09s);
+    }
+
+    #screen-splash .cinema-title .cinema-char:nth-child(1) {
+      --ci: 0;
+    }
+    #screen-splash .cinema-title .cinema-char:nth-child(2) {
+      --ci: 1;
+    }
+    #screen-splash .cinema-title .cinema-char:nth-child(3) {
+      --ci: 2;
+    }
+    #screen-splash .cinema-title .cinema-char:nth-child(4) {
+      --ci: 3;
+    }
+    #screen-splash .cinema-title .cinema-char:nth-child(5) {
+      --ci: 4;
+    }
+
+    #screen-splash .cinema-byline {
+      font-family: 'Cormorant Garamond', Georgia, serif;
+      font-size: clamp(1.15rem, 4.2vw, 1.65rem);
+      font-weight: 600;
+      font-style: italic;
+      letter-spacing: 0.28em;
+      text-transform: uppercase;
+      color: rgba(245, 215, 138, 0.92);
+      margin-top: 1.25rem;
+      text-shadow: 0 0 24px rgba(232, 192, 102, 0.25);
+      animation: cinema-byline-in 1.2s var(--ease-out-expo) 1.35s both;
+    }
+
+    #screen-splash .cinema-cta {
+      position: relative;
+      z-index: 10;
+      margin-top: clamp(2rem, 6vh, 3.5rem);
+      animation: cinema-cta-in 1s var(--ease-out-expo) 2.1s both;
+      letter-spacing: 0.22em;
+      text-indent: 0.22em;
+      padding-left: 2.5rem;
+      padding-right: 2.5rem;
+    }
+
+    #screen-splash .cinema-cta:focus-visible {
+      outline: 2px solid rgba(232, 192, 102, 0.8);
+      outline-offset: 4px;
     }
 
     #screen-splash.is-out {
       pointer-events: none;
-      animation: splash-out 0.45s var(--ease-out-expo) forwards;
+      animation: cinema-splash-out 0.75s cubic-bezier(0.7, 0, 0.15, 1) forwards;
     }
 
-    @keyframes splash-out {
-      to {
+    @keyframes cinema-splash-out {
+      0% {
+        opacity: 1;
+        filter: brightness(1) blur(0);
+        transform: scale(1);
+      }
+      40% {
+        filter: brightness(1.35) blur(0);
+      }
+      100% {
         opacity: 0;
-        transform: scale(1.02);
+        filter: brightness(1.6) blur(14px);
+        transform: scale(1.06);
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      #screen-splash .cinema-grain,
+      #screen-splash .cinema-sweep,
+      #screen-splash .cinema-orb,
+      #screen-splash .cinema-flare,
+      #screen-splash .cinema-suits span {
+        animation: none !important;
+      }
+
+      #screen-splash .cinema-tagline,
+      #screen-splash .cinema-title .cinema-char,
+      #screen-splash .cinema-byline,
+      #screen-splash .cinema-cta {
+        animation: none !important;
+        opacity: 1;
+        transform: none;
+        filter: none;
+      }
+
+      #screen-splash.is-out {
+        animation: splash-out-simple 0.35s ease forwards;
+      }
+
+      @keyframes splash-out-simple {
+        to {
+          opacity: 0;
+        }
       }
     }
 
@@ -512,29 +831,34 @@
   </style>
 </head>
 <body class="min-h-screen min-h-[100dvh] bg-stage bg-mesh font-sans text-slate-100 antialiased md:overflow-auto">
-  <!-- Intro (mobilfreundlich, safe area) -->
-  <div
-    id="screen-splash"
-    class="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-[#040f0c] text-center touch-manipulation"
-    aria-hidden="false"
-  >
-    <div class="pointer-events-none absolute inset-0 overflow-hidden">
-      <div
-        class="splash-orb absolute left-1/2 top-[38%] h-[min(90vw,420px)] w-[min(90vw,420px)] -translate-x-1/2 -translate-y-1/2 rounded-full bg-gradient-to-b from-emerald-500/25 via-gold/10 to-transparent blur-3xl"
-        aria-hidden="true"
-      ></div>
+  <!-- Intro · cinema -->
+  <div id="screen-splash" class="cinema-splash" aria-hidden="false">
+    <div class="cinema-letterbox cinema-letterbox--top" aria-hidden="true"></div>
+    <div class="cinema-letterbox cinema-letterbox--bottom" aria-hidden="true"></div>
+    <div class="cinema-orb" aria-hidden="true"></div>
+    <div class="cinema-sweep" aria-hidden="true"></div>
+    <div class="cinema-flare" aria-hidden="true"></div>
+    <div class="cinema-vignette" aria-hidden="true"></div>
+    <div class="cinema-grain" aria-hidden="true"></div>
+    <div class="cinema-suits" aria-hidden="true">
+      <span class="s1">♠</span>
+      <span class="s2">♥</span>
+      <span class="s3">♦</span>
+      <span class="s4">♣</span>
     </div>
-    <div class="relative z-[1] px-6">
-      <p class="mb-3 text-[10px] font-semibold uppercase tracking-[0.35em] text-emerald-400/80">Kartenspiel</p>
-      <h1 class="splash-title font-display text-[clamp(2.75rem,12vw,4.5rem)] font-extrabold tracking-[0.12em] text-white">DURAK</h1>
-      <p class="splash-byline mt-4 font-display text-lg font-medium tracking-wide text-gold-bright md:text-xl">by Celal73</p>
+    <div class="cinema-content px-4">
+      <p class="cinema-tagline">Ein Kartenspiel · Zweikampf</p>
+      <h1 class="cinema-title" aria-label="Durak">
+        <span class="cinema-char">D</span><span class="cinema-char">U</span><span class="cinema-char">R</span><span class="cinema-char">A</span><span class="cinema-char">K</span>
+      </h1>
+      <p class="cinema-byline">by Celal73</p>
     </div>
     <button
       type="button"
       id="btn-splash-continue"
-      class="btn-primary relative z-[1] mt-14 rounded-2xl px-10 py-3.5 font-display text-base font-bold text-felt shadow-glow touch-manipulation"
+      class="cinema-cta btn-primary touch-manipulation rounded-2xl py-4 font-display text-sm font-bold uppercase text-felt md:text-base"
     >
-      Weiter
+      Eintreten
     </button>
   </div>
 

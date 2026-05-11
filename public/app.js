@@ -1030,7 +1030,7 @@
     window.setTimeout(() => {
       splashEl.classList.add('hidden');
       splashEl.setAttribute('aria-hidden', 'true');
-    }, 460);
+    }, 780);
   }
   if (splashBtn) splashBtn.addEventListener('click', dismissSplash);
 })();
