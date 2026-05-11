@@ -24,9 +24,10 @@
   let turnAnimRaf = null;
   /** Debounce für automatischen Angriff / Nachlegen (mehrere Karten gleichen Rangs) */
   let autoCommitTimer = null;
-  const AUTO_ATTACK_MS = 420;
+  /** Pause nach letztem Antippen, damit 2–4 gleiche Karten gesammelt werden (Motor erlaubt das bereits). */
+  const AUTO_ATTACK_MS = 2800;
 
-  const TURN_MS = 15000;
+  const TURN_MS = 30000;
   /** KI „denkt“ zufällig lange vor jedem Zug (ms) */
   const AI_THINK_MIN_MS = 2000;
   const AI_THINK_MAX_MS = 4000;
@@ -560,10 +561,7 @@
   function renderActions(snap) {
     const bar = $('action-bar');
     bar.innerHTML = '';
-    if (!snap || snap.winnerIndex !== null) return;
-
-    const myAtt = snap.attackerIndex === snap.myIndex;
-    const myDef = snap.defenderIndex === snap.myIndex;
+    if (!snap) return;
 
     function btn(label, cls, onClick) {
       const b = document.createElement('button');
@@ -573,6 +571,20 @@
       b.addEventListener('click', onClick);
       bar.appendChild(b);
     }
+
+    if (snap.winnerIndex !== null) {
+      if (mode === 'ai') {
+        btn('Nochmal gegen KI', BTN_PRIMARY, () => {
+          clearAutoCommitTimer();
+          startAi();
+        });
+        btn('Zum Menü', BTN_GHOST, () => exitGame());
+      }
+      return;
+    }
+
+    const myAtt = snap.attackerIndex === snap.myIndex;
+    const myDef = snap.defenderIndex === snap.myIndex;
 
     if (snap.phase === 'toss' && myAtt) {
       btn('Passen · Stich gewonnen', BTN_GHOST, () => doPass());
@@ -599,7 +611,7 @@
     if (snap.phase === 'attack') {
       t =
         snap.attackerIndex === me
-          ? 'Karten wählen (gleicher Rang) — Angriff startet automatisch kurz nach der Auswahl.'
+          ? 'Ersten Angriff: 2–4 gleiche Ränge nacheinander antippen — legt automatisch los, wenn du kurz pausierst (oder warte auf Zeitende).'
           : 'Gegner greift an.';
     } else if (snap.phase === 'defend') {
       t =
@@ -609,7 +621,7 @@
     } else if (snap.phase === 'toss') {
       t =
         snap.attackerIndex === me
-          ? 'Passende Ränge antippen (Nachlegen automatisch) oder Passen zum Stichgewinn.'
+          ? 'Nachlegen: mehrere passende Karten nacheinander antippen (gleicher oder erlaubter Rang) — wie beim Angriff nach kurzer Pause automatisch, oder Passen.'
           : 'Gegner legt nach oder passt …';
     }
     el.textContent = t;
@@ -857,6 +869,17 @@
     socket.on('state', (payload) => {
       clearAutoCommitTimer();
       if (payload.mySlot != null) mySlotOnline = payload.mySlot;
+      const prevSnap = window.__lastOnlineSnap;
+      if (
+        payload.started &&
+        payload.snapshot &&
+        prevSnap &&
+        prevSnap.winnerIndex !== null &&
+        payload.snapshot.winnerIndex === null
+      ) {
+        selected.clear();
+        defendOrder = [];
+      }
       updateRoomUi(payload);
       if (payload.started && payload.snapshot) {
         mode = 'online';
@@ -957,9 +980,7 @@
   function renderActionsOnline(snap) {
     const bar = $('action-bar');
     bar.innerHTML = '';
-    if (!snap || snap.winnerIndex !== null) return;
-    const myAtt = snap.attackerIndex === snap.myIndex;
-    const myDef = snap.defenderIndex === snap.myIndex;
+    if (!snap) return;
 
     function btn(label, cls, onClick) {
       const b = document.createElement('button');
@@ -969,6 +990,19 @@
       b.addEventListener('click', onClick);
       bar.appendChild(b);
     }
+
+    if (snap.winnerIndex !== null) {
+      btn('Neue Runde · gleicher Raum', BTN_PRIMARY, () => {
+        if (!socket) return;
+        socket.emit('rematch', (r) => {
+          if (!r || !r.ok) $('phase-hint').textContent = (r && r.err) || 'Neue Runde fehlgeschlagen';
+        });
+      });
+      return;
+    }
+
+    const myAtt = snap.attackerIndex === snap.myIndex;
+    const myDef = snap.defenderIndex === snap.myIndex;
 
     if (snap.phase === 'toss' && myAtt) {
       btn('Passen', BTN_GHOST, () => {
