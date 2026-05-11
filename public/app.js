@@ -200,17 +200,16 @@
     if (pinEl && rankGuess) {
       pinEl.classList.remove('hidden');
       pinEl.innerHTML =
-        '<div class="card-face mx-auto flex h-[3.55rem] w-[2.5rem] flex-col justify-between rounded-md border border-amber-200/40 p-1 text-[10px] shadow-card sm:h-[3.75rem] sm:w-[2.65rem]" data-trump-mini>' +
+        '<div class="card-face flex h-[2.35rem] w-[1.58rem] flex-col justify-between rounded border border-amber-200/40 p-0.5 text-[6.5px] shadow-card sm:h-[2.5rem] sm:w-[1.68rem]" data-trump-mini title="Unterste Karte im Nachziehstapel legt Trumpf fest">' +
         '<span class="' +
         (redTrump ? 'text-rose-500' : 'text-slate-800') +
         ' font-bold leading-none">' +
         rankGuess +
-        '</span><span class="text-center text-lg leading-none ' +
+        '</span><span class="text-center text-[11px] leading-none ' +
         (redTrump ? 'text-rose-500' : 'text-slate-800') +
         '">' +
         s +
-        '</span><span></span></div>' +
-        '<p class="mt-1 text-center text-[10px] text-white/55">Ausgeteilt: unterste Karte im Nachziehstapel legt Trumpf fest</p>';
+        '</span><span></span></div>';
     } else if (pinEl) {
       pinEl.classList.add('hidden');
       pinEl.innerHTML = '';
@@ -314,7 +313,7 @@
     const trump = c.suit === trumpSuit;
     const el = document.createElement('div');
     el.className =
-      'card-face flex h-[5.5rem] w-[3.85rem] flex-col justify-between rounded-lg border border-slate-200/70 p-1.5 text-xs shadow-card sm:h-24 sm:w-[4.65rem] sm:rounded-xl sm:p-2 sm:text-sm md:h-[6.5rem] md:w-[4.5rem] ' +
+      'card-face flex h-[6.25rem] w-[4.2rem] flex-col justify-between rounded-lg border border-slate-200/70 p-1.5 text-xs shadow-card sm:h-[6.75rem] sm:w-[4.75rem] sm:rounded-xl sm:p-2 sm:text-sm md:h-[7.25rem] md:w-[5rem] ' +
       (red ? 'card-red' : 'card-black') +
       (trump ? ' card-trump' : '') +
       (extraClass ? ' ' + extraClass : '');
@@ -476,7 +475,7 @@
       } else {
         const hole = document.createElement('div');
         hole.className =
-          'flex h-[5.5rem] w-[3.85rem] items-center justify-center rounded-lg border-2 border-dashed border-gold/35 bg-black/20 text-sm font-medium text-gold/50 shadow-inner sm:h-24 sm:w-[4.65rem] md:h-[6.5rem] md:w-[4.5rem]';
+          'table-card-slot flex h-[6.25rem] w-[4.2rem] items-center justify-center rounded-lg border-2 border-dashed border-gold/35 bg-black/20 text-sm font-medium text-gold/50 shadow-inner sm:h-[6.75rem] sm:w-[4.75rem] md:h-[7.25rem] md:w-[5rem]';
         hole.textContent = '?';
         pair.appendChild(hole);
       }

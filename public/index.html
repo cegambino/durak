@@ -222,6 +222,11 @@
       filter: drop-shadow(0 2px 8px rgba(232, 192, 102, 0.35));
     }
 
+    .trump-strip .trump-suit {
+      font-size: clamp(1.1rem, 4vw, 1.5rem);
+      filter: drop-shadow(0 1px 4px rgba(232, 192, 102, 0.25));
+    }
+
     .table-felt {
       background: radial-gradient(ellipse 80% 100% at 50% 100%, rgba(18, 69, 54, 0.65) 0%, rgba(10, 47, 36, 0.35) 100%);
       border: 1px solid rgba(255, 255, 255, 0.08);
@@ -425,22 +430,23 @@
       }
 
       #screen-game .layout-compact .anim-table-pair .card-face {
-        height: 5.1rem;
-        width: 3.45rem;
-        font-size: 0.7rem;
+        height: 6.85rem;
+        width: 4.45rem;
+        font-size: 0.78rem;
+        padding: 0.35rem 0.45rem;
       }
 
       #screen-game .layout-compact .anim-table-pair .card-face span.text-xl {
-        font-size: 1.1rem;
+        font-size: 1.35rem;
       }
 
       #screen-game .layout-compact .anim-table-pair .card-face span.sm\:text-2xl {
-        font-size: 1.2rem;
+        font-size: 1.5rem;
       }
 
-      #screen-game .layout-compact .anim-table-pair .flex.h-\[5\.5rem\] {
-        height: 5.1rem;
-        width: 3.45rem;
+      #screen-game .layout-compact .anim-table-pair .table-card-slot {
+        height: 6.85rem;
+        width: 4.45rem;
       }
 
       #screen-game .layout-compact #opponent-backs .card-back {
@@ -452,10 +458,14 @@
         transform: scale(0.72);
       }
 
-      /* Tisch: mehr Fläche, Inhalt zentriert (nicht unten „kleben“) */
+      /* Tisch: viel Fläche, Karten gut sichtbar */
       #screen-game .layout-compact #table-area.table-felt {
-        min-height: min(46vh, 22rem);
-        flex: 1 1 52%;
+        min-height: min(56vh, 30rem);
+        flex: 1 1 64%;
+      }
+
+      #screen-game .layout-compact .anim-table-pair .pb-8 {
+        padding-bottom: 2.25rem;
       }
 
       #screen-game .layout-compact #table-rows {
@@ -571,25 +581,34 @@
         </div>
 
         <div class="layout-compact screen-enter flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl glass-panel p-2 shadow-glow md:rounded-3xl md:p-8 lg:p-10">
-          <div class="mb-1 flex min-h-0 shrink-0 flex-col gap-1.5 sm:mb-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3 md:mb-6 md:gap-6">
-            <div class="min-w-0 flex-1 md:pr-2">
+          <!-- Trumpf kompakt oben -->
+          <div
+            class="trump-strip trump-badge mb-1 flex min-h-0 shrink-0 flex-wrap items-center justify-center gap-x-3 gap-y-1 rounded-lg border border-gold/25 px-2 py-1.5 text-center md:mb-3 md:gap-x-5 md:rounded-xl md:px-4 md:py-2"
+          >
+            <p class="text-[8px] font-bold uppercase tracking-[0.2em] text-gold/90 md:text-[9px] md:tracking-[0.22em]">Trumpffarbe</p>
+            <p id="trump-suit-name" class="font-display text-xs font-semibold capitalize leading-none text-white md:text-sm">—</p>
+            <p id="trump-display" class="trump-suit font-display font-bold leading-none text-gold-bright" aria-hidden="true">—</p>
+            <div id="trump-card-pin" class="hidden shrink-0 rounded-md"></div>
+            <p id="deck-count" class="text-[9px] font-medium text-white/50 md:text-[10px]"></p>
+            <p
+              id="trump-explain"
+              class="hidden basis-full text-center text-[10px] leading-snug text-white/55 md:mt-0.5 md:block md:text-xs"
+            >
+              Alle Karten dieser Farbe sind Trumpf — sie schlagen jede andere Farbe.
+            </p>
+          </div>
+
+          <div class="mb-1 flex min-h-0 shrink-0 flex-col gap-1 sm:mb-2 md:mb-4">
+            <div class="min-w-0 md:pr-2">
               <p id="opponent-label" class="font-display text-xs font-semibold uppercase tracking-wider text-gold/90 md:text-sm">Gegner</p>
               <div class="mt-1 flex flex-wrap items-center gap-1.5 sm:mt-2 md:mt-3 md:gap-4">
                 <div id="opponent-backs" class="relative flex h-12 items-center pl-0.5 sm:h-[5.25rem]"></div>
                 <p id="opponent-cards" class="text-xs text-white/55 md:text-base md:text-sm">Karten: —</p>
               </div>
             </div>
-            <div class="trump-badge flex w-full shrink-0 flex-col items-center justify-center rounded-xl px-3 py-2 text-center sm:w-auto sm:max-w-[10.5rem] md:max-w-none md:rounded-2xl md:px-7 md:py-5">
-              <p class="text-[9px] font-bold uppercase tracking-[0.22em] text-gold md:text-[10px] md:tracking-[0.28em]">Trumpffarbe</p>
-              <p id="trump-suit-name" class="mt-1 font-display text-base font-semibold capitalize leading-tight text-white md:mt-2 md:text-xl">—</p>
-              <p id="trump-display" class="trump-suit mt-0.5 font-display text-2xl font-bold leading-none text-gold-bright md:text-[clamp(2rem,5vw,3rem)]" aria-hidden="true">—</p>
-              <p id="trump-explain" class="mx-auto mt-1 hidden max-w-[14rem] text-[11px] leading-snug text-white/65 md:mt-2 md:block md:text-xs">Alle Karten dieser Farbe sind Trumpf — sie schlagen jede andere Farbe.</p>
-              <div id="trump-card-pin" class="mt-2 hidden rounded-lg md:mt-3"></div>
-              <p id="deck-count" class="mt-1 text-[10px] font-medium text-white/50 md:mt-2 md:text-xs"></p>
-            </div>
           </div>
 
-          <div id="table-area" class="table-felt relative mt-0.5 flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl p-2 md:mt-0 md:min-h-[300px] md:rounded-2xl md:p-8">
+          <div id="table-area" class="table-felt relative mt-0.5 flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl p-2 md:mt-0 md:min-h-[min(44vh,28rem)] md:rounded-2xl md:p-8">
             <div class="pointer-events-none absolute right-2 top-2 opacity-25 md:right-6 md:top-6 md:opacity-30">
               <div class="deck-pile h-12 w-9 rounded-md border border-white/10 bg-gradient-to-b from-emerald-900/80 to-black/60 shadow-card sm:h-20 sm:w-14"></div>
             </div>
