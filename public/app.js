@@ -22,10 +22,6 @@
   let aiTurnKey = '';
   let aiTurnEndsAt = 0;
   let turnAnimRaf = null;
-  /** Debounce für automatischen Angriff / Nachlegen (mehrere Karten gleichen Rangs) */
-  let autoCommitTimer = null;
-  /** Pause nach letztem Antippen, damit 2–4 gleiche Karten gesammelt werden (Motor erlaubt das bereits). */
-  const AUTO_ATTACK_MS = 2800;
 
   const TURN_MS = 30000;
   /** KI „denkt“ zufällig lange vor jedem Zug (ms) */
@@ -70,48 +66,6 @@
     return [snap.phase, snap.attackerIndex, snap.defenderIndex, snap.table.length, undef, snap.deckCount].join('|');
   }
 
-  function clearAutoCommitTimer() {
-    if (autoCommitTimer) {
-      clearTimeout(autoCommitTimer);
-      autoCommitTimer = null;
-    }
-  }
-
-  function scheduleAutoCommitAttackToss() {
-    clearAutoCommitTimer();
-    const snapRef =
-      mode === 'ai' && localState
-        ? `ai|${localState.phase}|${localState.attackerIndex}|${localState.table.length}|${localState.defenderIndex}`
-        : mode === 'online' && window.__lastOnlineSnap
-          ? (() => {
-              const s = window.__lastOnlineSnap;
-              return `on|${s.phase}|${s.attackerIndex}|${s.table.length}|${s.defenderIndex}|${s.myIndex}`;
-            })()
-          : '';
-    autoCommitTimer = setTimeout(() => {
-      autoCommitTimer = null;
-      if (mode === 'ai' && localState) {
-        const cur = localState;
-        const curKey = `ai|${cur.phase}|${cur.attackerIndex}|${cur.table.length}|${cur.defenderIndex}`;
-        if (curKey !== snapRef) return;
-        if (cur.phase !== 'attack' && cur.phase !== 'toss') return;
-        if (cur.attackerIndex !== 0) return;
-        const ids = [...selected];
-        if (ids.length === 0) return;
-        doAttack(ids);
-      } else if (mode === 'online' && socket && window.__lastOnlineSnap) {
-        const cur = window.__lastOnlineSnap;
-        const curKey = `on|${cur.phase}|${cur.attackerIndex}|${cur.table.length}|${cur.defenderIndex}|${cur.myIndex}`;
-        if (curKey !== snapRef) return;
-        if (cur.phase !== 'attack' && cur.phase !== 'toss') return;
-        if (cur.attackerIndex !== cur.myIndex) return;
-        const ids = [...selected];
-        if (ids.length === 0) return;
-        doAttack(ids);
-      }
-    }, AUTO_ATTACK_MS);
-  }
-
   function tryAutoDefendAi() {
     if (mode !== 'ai' || !localState) return;
     if (localState.phase !== 'defend' || localState.defenderIndex !== 0) return;
@@ -127,6 +81,56 @@
     const need = cur.table.filter((r) => !r[1]).length;
     if (need === 0 || need !== defendOrder.length) return;
     doDefend([...defendOrder]);
+  }
+
+  /** Eine Karte: nach kurzer Pause automatisch legen (wie früher). Zwei+ weiter mit „Legen“. */
+  let singleCardLayTimer = null;
+  const SINGLE_CARD_LAY_MS = 700;
+
+  function clearSingleCardLayTimer() {
+    if (singleCardLayTimer) {
+      clearTimeout(singleCardLayTimer);
+      singleCardLayTimer = null;
+    }
+  }
+
+  function maybeScheduleSingleCardLay() {
+    clearSingleCardLayTimer();
+    const snap =
+      mode === 'ai' && localState
+        ? E.publicSnapshot(localState, 0)
+        : mode === 'online' && window.__lastOnlineSnap
+          ? window.__lastOnlineSnap
+          : null;
+    if (!snap || snap.winnerIndex !== null) return;
+    if (selected.size !== 1) return;
+    const myAtt = snap.attackerIndex === snap.myIndex;
+    if (!myAtt) return;
+    if (snap.phase === 'attack') {
+      if (snap.table.length !== 0) return;
+    } else if (snap.phase === 'toss') {
+      /* ok */
+    } else {
+      return;
+    }
+
+    singleCardLayTimer = setTimeout(() => {
+      singleCardLayTimer = null;
+      const s2 =
+        mode === 'ai' && localState
+          ? E.publicSnapshot(localState, 0)
+          : mode === 'online' && window.__lastOnlineSnap
+            ? window.__lastOnlineSnap
+            : null;
+      if (!s2 || s2.winnerIndex !== null) return;
+      if (selected.size !== 1) return;
+      if (s2.attackerIndex !== s2.myIndex) return;
+      if (s2.phase === 'attack' && s2.table.length !== 0) return;
+      if (s2.phase !== 'attack' && s2.phase !== 'toss') return;
+      const ids = [...selected];
+      if (ids.length !== 1) return;
+      doAttack(ids);
+    }, SINGLE_CARD_LAY_MS);
   }
 
   function sortHandDisplay(hand, trumpSuit) {
@@ -284,7 +288,15 @@
         if (mode === 'ai' && localState) {
           const ap = E.activePlayerIndex(localState);
           if (ap != null && localState.winnerIndex === null) {
-            const r = E.applyTurnTimeout(localState, ap);
+            let r = { ok: false };
+            if (
+              ap === 0 &&
+              (localState.phase === 'attack' || localState.phase === 'toss') &&
+              selected.size > 0
+            ) {
+              r = E.attack(localState, [...selected], 0);
+            }
+            if (!r.ok) r = E.applyTurnTimeout(localState, ap);
             if (r.ok) {
               selected.clear();
               defendOrder = [];
@@ -523,14 +535,15 @@
         else selected.add(cardId);
         pruneAttackSelection();
         renderGame();
-        scheduleAutoCommitAttackToss();
+        maybeScheduleSingleCardLay();
         return;
       }
       if (phase === 'toss' && myAtt) {
         if (selected.has(cardId)) selected.delete(cardId);
         else selected.add(cardId);
+        pruneTossSelection();
         renderGame();
-        scheduleAutoCommitAttackToss();
+        maybeScheduleSingleCardLay();
         return;
       }
       if (phase === 'defend' && myDef) {
@@ -554,6 +567,15 @@
     for (const c of cards) if (c.rank !== r0) selected.delete(c.id);
   }
 
+  function pruneTossSelection() {
+    if (!localState || localState.phase !== 'toss') return;
+    const allowed = E.ranksOnTable(localState.table);
+    for (const id of [...selected]) {
+      const c = localState.hands[0].find((x) => x.id === id);
+      if (!c || !allowed.has(c.rank)) selected.delete(id);
+    }
+  }
+
   function syncDefendSelectionFromOrder() {
     selected = new Set(defendOrder);
   }
@@ -575,7 +597,6 @@
     if (snap.winnerIndex !== null) {
       if (mode === 'ai') {
         btn('Nochmal gegen KI', BTN_PRIMARY, () => {
-          clearAutoCommitTimer();
           startAi();
         });
         btn('Zum Menü', BTN_GHOST, () => exitGame());
@@ -591,6 +612,19 @@
     }
     if (snap.phase === 'defend' && myDef) {
       btn('Aufnehmen', BTN_DANGER, () => doTake());
+    }
+    const canLayAttack =
+      myAtt &&
+      snap.phase === 'attack' &&
+      snap.table.length === 0 &&
+      selected.size > 0;
+    const canLayToss = myAtt && snap.phase === 'toss' && selected.size > 0;
+    if (canLayAttack || canLayToss) {
+      btn('Legen', BTN_PRIMARY, () => {
+        const ids = [...selected];
+        if (!ids.length) return;
+        doAttack(ids);
+      });
     }
   }
 
@@ -611,7 +645,7 @@
     if (snap.phase === 'attack') {
       t =
         snap.attackerIndex === me
-          ? 'Ersten Angriff: 2–4 gleiche Ränge nacheinander antippen — legt automatisch los, wenn du kurz pausierst (oder warte auf Zeitende).'
+          ? 'Eine Karte: kurz antippen — legt automatisch. Mehrere gleiche Ränge: alle antippen, dann „Legen“.'
           : 'Gegner greift an.';
     } else if (snap.phase === 'defend') {
       t =
@@ -621,7 +655,7 @@
     } else if (snap.phase === 'toss') {
       t =
         snap.attackerIndex === me
-          ? 'Nachlegen: mehrere passende Karten nacheinander antippen (gleicher oder erlaubter Rang) — wie beim Angriff nach kurzer Pause automatisch, oder Passen.'
+          ? 'Eine Karte nachlegen: antippen, legt automatisch. Mehrere: wählen, dann „Legen“ — oder Passen.'
           : 'Gegner legt nach oder passt …';
     }
     el.textContent = t;
@@ -672,6 +706,7 @@
   }
 
   function doAttack(ids) {
+    clearSingleCardLayTimer();
     if (mode === 'ai' && localState) {
       const r = E.attack(localState, ids, 0);
       if (!r.ok) {
@@ -687,12 +722,13 @@
     if (mode === 'online' && socket) {
       socket.emit('attack', ids, (r) => {
         if (!r.ok) $('phase-hint').textContent = r.err || 'Fehler';
-        selected.clear();
+        else selected.clear();
       });
     }
   }
 
   function doDefend(ids) {
+    clearSingleCardLayTimer();
     if (mode === 'ai' && localState) {
       const r = E.defend(localState, ids, 0);
       if (!r.ok) {
@@ -715,6 +751,7 @@
   }
 
   function doPass() {
+    clearSingleCardLayTimer();
     if (mode === 'ai' && localState) {
       E.attackerPass(localState, 0);
       selected.clear();
@@ -723,6 +760,7 @@
       return;
     }
     if (mode === 'online' && socket) {
+      clearSingleCardLayTimer();
       socket.emit('pass', () => {
         selected.clear();
       });
@@ -730,6 +768,7 @@
   }
 
   function doTake() {
+    clearSingleCardLayTimer();
     if (mode === 'ai' && localState) {
       E.defenderTake(localState, 0);
       defendOrder = [];
@@ -747,7 +786,7 @@
   }
 
   function startAi() {
-    clearAutoCommitTimer();
+    clearSingleCardLayTimer();
     clearAiTimer();
     stopTurnVisualizer();
     aiTurnKey = '';
@@ -762,7 +801,7 @@
   }
 
   function exitGame() {
-    clearAutoCommitTimer();
+    clearSingleCardLayTimer();
     clearAiTimer();
     stopTurnVisualizer();
     aiTurnKey = '';
@@ -867,7 +906,7 @@
     if (!socket || socket.__wired) return;
     socket.__wired = true;
     socket.on('state', (payload) => {
-      clearAutoCommitTimer();
+      clearSingleCardLayTimer();
       if (payload.mySlot != null) mySlotOnline = payload.mySlot;
       const prevSnap = window.__lastOnlineSnap;
       if (
@@ -958,12 +997,19 @@
             for (const x of cards) if (x.rank !== r0) selected.delete(x.id);
           }
           renderGameOnline(cur);
-          scheduleAutoCommitAttackToss();
+          maybeScheduleSingleCardLay();
         } else if (ph === 'toss' && iAtt) {
           if (selected.has(c.id)) selected.delete(c.id);
           else selected.add(c.id);
+          {
+            const allowed = E.ranksOnTable(cur.table);
+            for (const id of [...selected]) {
+              const card = cur.myHand.find((x) => x.id === id);
+              if (!card || !allowed.has(card.rank)) selected.delete(id);
+            }
+          }
           renderGameOnline(cur);
-          scheduleAutoCommitAttackToss();
+          maybeScheduleSingleCardLay();
         } else if (ph === 'defend' && iDef) {
           const idx = defendOrder.indexOf(c.id);
           if (idx >= 0) defendOrder.splice(idx, 1);
@@ -1017,6 +1063,19 @@
           defendOrder = [];
           selected.clear();
         });
+      });
+    }
+    const canLayAttack =
+      myAtt &&
+      snap.phase === 'attack' &&
+      snap.table.length === 0 &&
+      selected.size > 0;
+    const canLayToss = myAtt && snap.phase === 'toss' && selected.size > 0;
+    if (canLayAttack || canLayToss) {
+      btn('Legen', BTN_PRIMARY, () => {
+        const ids = [...selected];
+        if (!ids.length) return;
+        doAttack(ids);
       });
     }
   }
